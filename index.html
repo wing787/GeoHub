@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoHub - Map Viewer</title>
+  <link rel="stylesheet" href="/src/styles/main.css">
+  <link rel="stylesheet" href="/src/styles/panel.css">
+  <link rel="stylesheet" href="/src/styles/basemapControl.css">
+  <link rel="stylesheet" href="/src/styles/layerPanel.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 地図コンテナ -->
+    <div id="map"></div>
+    
+    <!-- サイドパネル -->
+    <aside id="side-panel" class="side-panel">
+      <div class="panel-header">
+        <h2>コントロールパネル</h2>
+        <button id="panel-close" class="panel-close">&times;</button>
+      </div>
+
+      <!-- タブナビゲーション -->
+      <div class="panel-tabs">
+        <button class="tab-button active" data-tab="layers">レイヤー</button>
+        <button class="tab-button" data-tab="data">データ</button>
+      </div>
+
+      <!-- タブコンテンツ -->
+      <div class="panel-content">
+        <!-- レイヤータブ -->
+        <div id="tab-layers" class="tab-content active">
+          <div class="layer-list" id="layer-list">
+            <p class="panel-placeholder">レイヤーがありません</p>
+          </div>
+          <div class="layer-actions">
+            <button class="btn-add-layer" id="btn-add-layer">
+              + レイヤーを追加
+            </button>
+          </div>
+        </div>
+
+        <!-- データタブ -->
+        <div id="tab-data" class="tab-content">
+          <p class="panel-placeholder">地図上の地物をクリックしてください</p>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- パネル開閉ボタン -->
+    <button id="panel-toggle" class="panel-toggle" title="パネルを開く">
+      <span>📊</span>
+    </button>
+  </div>
+  
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

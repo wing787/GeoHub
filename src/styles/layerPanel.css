@@ -1,0 +1,177 @@
+/* タブナビゲーション */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f8f8;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.tab-button.active {
+  color: #4a90e2;
+  border-bottom-color: #4a90e2;
+  background: white;
+}
+
+/* タブコンテンツ */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* レイヤーリスト */
+.layer-list {
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.layer-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+  transition: background 0.2s;
+}
+
+.layer-item:hover {
+  background: #fafafa;
+}
+
+.layer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.layer-visibility {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.layer-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* レイヤーコントロール */
+.layer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opacity-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.opacity-control label {
+  min-width: 50px;
+}
+
+.opacity-slider {
+  flex: 1;
+  cursor: pointer;
+}
+
+.opacity-value {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 500;
+  color: #333;
+}
+
+.layer-delete {
+  align-self: flex-end;
+  padding: 4px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #d32f2f;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.layer-delete:hover {
+  background: #ffebee;
+  border-color: #d32f2f;
+}
+
+/* レイヤーアクション */
+.layer-actions {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f8f8;
+}
+
+.btn-add-layer {
+  width: 100%;
+  padding: 10px 16px;
+  background: #4a90e2;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add-layer:hover {
+  background: #357abd;
+}
+
+.btn-add-layer:active {
+  background: #2868a8;
+}
+
+/* データタブ */
+#tab-data {
+  padding: 20px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .layer-item {
+    padding: 10px 12px;
+  }
+
+  .layer-controls {
+    flex-direction: column;
+  }
+
+  .opacity-control {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .opacity-slider {
+    width: 100%;
+  }
+}

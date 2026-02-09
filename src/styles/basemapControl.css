@@ -1,0 +1,66 @@
+/* 背景地図切り替えコントロール */
+.basemap-control {
+  position: absolute;
+  top: 60px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.basemap-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.basemap-select {
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.basemap-select:hover {
+  border-color: #999;
+}
+
+.basemap-select:focus {
+  border-color: #4a90e2;
+}
+
+/* パネルが開いているときは非表示にする（オプション） */
+.side-panel.open ~ #map .basemap-control {
+  opacity: 0.7;
+}
+
+.side-panel.open ~ #map .basemap-control:hover {
+  opacity: 1;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .basemap-control {
+    top: 10px;
+    right: 60px;
+    padding: 8px 10px;
+  }
+
+  .basemap-label {
+    display: none;
+  }
+
+  .basemap-select {
+    font-size: 12px;
+  }
+}

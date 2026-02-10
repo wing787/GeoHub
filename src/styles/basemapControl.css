@@ -1,8 +1,8 @@
 /* 背景地図切り替えコントロール */
 .basemap-control {
   position: absolute;
-  top: 60px;
-  right: 10px;
+  top: 10px;
+  left: 50px;
   z-index: 1000;
   background: white;
   border-radius: 4px;

@@ -38,6 +38,18 @@ export const basemaps = {
     ],
     tileSize: 256,
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>'
+  },
+
+  // OpenStreetMap
+  osm: {
+    id: 'osm',
+    name: 'OpenStreetMap',
+    type: 'raster',
+    tiles: [
+      'https://tile.openstreetmap.jp/{z}/{x}/{y}.png'
+    ],
+    tileSize: 256,
+    attribution: '<a href="http://osm.org/copyright" target="_blank">OSM</a>'
   }
 };
 

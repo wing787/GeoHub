@@ -132,7 +132,7 @@ export function addRasterTileLayer(config) {
 
 /**
  * ベクタータイルレイヤーを追加（便利関数）
- * @param {Object} config - { name, tiles, attribution }
+ * @param {Object} config - { name, tiles, attribution, metadata }
  */
 export function addVectorTileLayer(config) {
   return addLayer({
@@ -142,7 +142,8 @@ export function addVectorTileLayer(config) {
       type: 'vector',
       tiles: config.tiles,
       attribution: config.attribution || ''
-    }
+    },
+    metadata: config.metadata || {}
   });
 }
 

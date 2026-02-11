@@ -4,8 +4,10 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getDefaultBasemap } from './basemaps.js';
+import { Protocol } from 'pmtiles';
 
 let map = null;
+let pmtilesProtocol = null;
 
 /**
  * 地図を初期化
@@ -14,12 +16,20 @@ let map = null;
  * @returns {maplibregl.Map} 地図インスタンス
  */
 export function initMap(containerId, options = {}) {
+  // PMTilesプロトコルを登録
+  if (!pmtilesProtocol) {
+    pmtilesProtocol = new Protocol();
+    maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
+    console.log('GeoHub: PMTiles protocol registered');
+  }
+
   const defaultBasemap = getDefaultBasemap();
-  
+
   const defaultOptions = {
     container: containerId,
     style: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         [defaultBasemap.id]: {
           type: defaultBasemap.type,
@@ -119,52 +129,83 @@ export function switchBasemap(basemapId) {
  * 実際の背景地図切り替え処理
  */
 function performBasemapSwitch(basemap) {
-  // 既存の背景地図レイヤーとソースを削除
-  const style = map.getStyle();
-  const existingLayers = style.layers.filter(layer =>
-    layer.source && layer.source.startsWith('gsi-')
-  );
+  try {
+    const style = map.getStyle();
 
-  existingLayers.forEach(layer => {
-    if (map.getLayer(layer.id)) {
-      map.removeLayer(layer.id);
+    // 既存の背景地図レイヤーを削除
+    const layersToRemove = style.layers.filter(layer =>
+      layer.source && typeof layer.source === 'string' && layer.source.startsWith('gsi-')
+    );
+
+    console.log(`GeoHub: Removing ${layersToRemove.length} basemap layers`);
+    layersToRemove.forEach(layer => {
+      try {
+        if (map.getLayer(layer.id)) {
+          map.removeLayer(layer.id);
+          console.log(`GeoHub: Removed layer ${layer.id}`);
+        }
+      } catch (error) {
+        console.error(`GeoHub: Failed to remove layer ${layer.id}`, error);
+      }
+    });
+
+    // 既存の背景地図ソースを削除
+    const sourcesToRemove = Object.keys(style.sources).filter(sourceId =>
+      sourceId.startsWith('gsi-')
+    );
+
+    console.log(`GeoHub: Removing ${sourcesToRemove.length} basemap sources`);
+    sourcesToRemove.forEach(sourceId => {
+      try {
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+          console.log(`GeoHub: Removed source ${sourceId}`);
+        }
+      } catch (error) {
+        console.error(`GeoHub: Failed to remove source ${sourceId}`, error);
+      }
+    });
+
+    // 新しい背景地図ソースを追加
+    if (!map.getSource(basemap.id)) {
+      map.addSource(basemap.id, {
+        type: basemap.type,
+        tiles: basemap.tiles,
+        tileSize: basemap.tileSize,
+        attribution: basemap.attribution
+      });
+      console.log(`GeoHub: Added source ${basemap.id}`);
     }
-  });
 
-  // 既存の背景地図ソースを削除
-  Object.keys(style.sources).forEach(sourceId => {
-    if (sourceId.startsWith('gsi-') && map.getSource(sourceId)) {
-      map.removeSource(sourceId);
+    // 新しい背景地図レイヤーを追加（全てのレイヤーの最背面に）
+    const newLayerId = `${basemap.id}-layer`;
+    if (!map.getLayer(newLayerId)) {
+      map.addLayer({
+        id: newLayerId,
+        type: 'raster',
+        source: basemap.id
+      }, getFirstNonBasemapLayerId());
+      console.log(`GeoHub: Added layer ${newLayerId}`);
     }
-  });
 
-  // 新しい背景地図ソースを追加
-  map.addSource(basemap.id, {
-    type: basemap.type,
-    tiles: basemap.tiles,
-    tileSize: basemap.tileSize,
-    attribution: basemap.attribution
-  });
-
-  // 新しい背景地図レイヤーを追加（最背面に）
-  map.addLayer({
-    id: `${basemap.id}-layer`,
-    type: 'raster',
-    source: basemap.id
-  }, getFirstSymbolLayerId());
-
-  console.log(`GeoHub: Switched to basemap ${basemap.id}`);
+    console.log(`GeoHub: Successfully switched to basemap ${basemap.id}`);
+  } catch (error) {
+    console.error('GeoHub: Failed to switch basemap', error);
+  }
 }
 
 /**
- * 最初のシンボルレイヤーのIDを取得（背景地図を最背面に配置するため）
+ * 背景地図以外の最初のレイヤーIDを取得（背景地図を最背面に配置するため）
  */
-function getFirstSymbolLayerId() {
+function getFirstNonBasemapLayerId() {
   const layers = map.getStyle().layers;
   for (let i = 0; i < layers.length; i++) {
-    if (layers[i].type === 'symbol') {
-      return layers[i].id;
+    const layer = layers[i];
+    // 背景地図（gsi-で始まるsource）以外のレイヤーを探す
+    if (layer.source && !layer.source.startsWith('gsi-')) {
+      return layer.id;
     }
   }
+  // 背景地図以外のレイヤーがない場合はundefinedを返す（最上位に追加）
   return undefined;
 }

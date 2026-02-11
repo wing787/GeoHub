@@ -1,8 +1,10 @@
 /**
  * レイヤーパネルの管理
  */
-import { getAllLayers, setLayerVisibility, setLayerOpacity, removeLayer } from '../map/layerManager.js';
+import { setLayerVisibility, setLayerOpacity, removeLayer, getLayer } from '../map/layerManager.js';
 import { getMap } from '../map/mapInstance.js';
+import { openDialog as openAddLayerDialog } from './addLayerDialog.js';
+import { openDialog as openStyleSettingDialog } from './styleDialog.js';
 
 let currentTab = 'layers';
 
@@ -53,11 +55,10 @@ function setupAddLayerButton() {
 }
 
 /**
- * レイヤー追加ダイアログを表示（簡易実装）
+ * レイヤー追加ダイアログを表示
  */
 function showAddLayerDialog() {
-  // 将来的にはモーダルダイアログで実装
-  alert('レイヤー追加機能は今後実装予定です。\n\nS3上のカスタムタイルやGeoJSONデータを読み込めるようになります。');
+  openAddLayerDialog();
 }
 
 /**
@@ -144,6 +145,29 @@ function createLayerItem(layer) {
   opacityContainer.appendChild(opacitySlider);
   opacityContainer.appendChild(opacityValue);
 
+  controls.appendChild(opacityContainer);
+
+  // ラベル設定（ベクタータイルとPMTilesのみ）
+  if (layer.type === 'vector' || layer.type === 'pmtiles') {
+    const labelControl = createLabelControl(layer);
+    controls.appendChild(labelControl);
+  }
+
+  // ボタンコンテナ
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'layer-button-container';
+
+  // スタイル設定ボタン（ベクタータイルとPMTilesのみ）
+  if (layer.type === 'vector' || layer.type === 'pmtiles') {
+    const styleButton = document.createElement('button');
+    styleButton.className = 'layer-style';
+    styleButton.textContent = 'スタイル';
+    styleButton.addEventListener('click', () => {
+      handleLayerStyle(layer.id);
+    });
+    buttonContainer.appendChild(styleButton);
+  }
+
   // 削除ボタン
   const deleteButton = document.createElement('button');
   deleteButton.className = 'layer-delete';
@@ -152,8 +176,8 @@ function createLayerItem(layer) {
     handleLayerDelete(layer.id);
   });
 
-  controls.appendChild(opacityContainer);
-  controls.appendChild(deleteButton);
+  buttonContainer.appendChild(deleteButton);
+  controls.appendChild(buttonContainer);
 
   item.appendChild(info);
   item.appendChild(controls);
@@ -178,6 +202,223 @@ function handleOpacityChange(layerId, opacity) {
 }
 
 /**
+ * ラベルコントロールを作成
+ */
+function createLabelControl(layer) {
+  const container = document.createElement('div');
+  container.className = 'label-control';
+
+  // ラベル表示チェックボックス
+  const checkboxContainer = document.createElement('div');
+  checkboxContainer.className = 'label-checkbox-container';
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'label-visibility';
+  checkbox.id = `label-${layer.id}`;
+  checkbox.checked = false;
+
+  const checkboxLabel = document.createElement('label');
+  checkboxLabel.htmlFor = `label-${layer.id}`;
+  checkboxLabel.textContent = 'ラベル表示';
+  checkboxLabel.className = 'label-checkbox-label';
+
+  checkboxContainer.appendChild(checkbox);
+  checkboxContainer.appendChild(checkboxLabel);
+
+  // 属性選択ドロップダウン
+  const selectContainer = document.createElement('div');
+  selectContainer.className = 'label-select-container';
+
+  const select = document.createElement('select');
+  select.className = 'label-attribute-select';
+  select.id = `label-attr-${layer.id}`;
+  select.disabled = true;
+
+  // デフォルトオプション
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = '属性を選択';
+  select.appendChild(defaultOption);
+
+  selectContainer.appendChild(select);
+
+  // イベントリスナー
+  checkbox.addEventListener('change', async (e) => {
+    const isChecked = e.target.checked;
+    select.disabled = !isChecked;
+
+    if (isChecked && select.options.length === 1) {
+      // 属性リストをロード
+      await loadAttributesForLabel(layer.id, select);
+    }
+
+    if (isChecked && select.value) {
+      handleLabelVisibilityChange(layer.id, true, select.value);
+    } else {
+      handleLabelVisibilityChange(layer.id, false, null);
+    }
+  });
+
+  select.addEventListener('change', (e) => {
+    if (checkbox.checked && e.target.value) {
+      handleLabelVisibilityChange(layer.id, true, e.target.value);
+    }
+  });
+
+  container.appendChild(checkboxContainer);
+  container.appendChild(selectContainer);
+
+  return container;
+}
+
+/**
+ * ラベル用の属性リストをロード
+ */
+async function loadAttributesForLabel(layerId, selectElement) {
+  const map = getMap();
+  if (!map) {
+    console.error('GeoHub: Map not found for loading label attributes');
+    return;
+  }
+
+  try {
+    const layer = getLayer(layerId);
+
+    if (!layer) {
+      console.error('GeoHub: Layer not found', layerId);
+      return;
+    }
+
+    console.log('GeoHub: Loading attributes for label', layerId, layer.metadata?.sourceLayer);
+
+    // フィーチャーから属性を取得
+    const features = map.querySourceFeatures(layerId, {
+      sourceLayer: layer.metadata?.sourceLayer
+    });
+
+    console.log(`GeoHub: Found ${features?.length || 0} features for label attributes`);
+
+    if (!features || features.length === 0) {
+      console.warn('GeoHub: No features found for label attributes. Try zooming in or panning to where the data is visible.');
+      alert('属性を読み込めませんでした。データが表示されている場所にズームしてから再度お試しください。');
+      return;
+    }
+
+    const properties = features[0].properties || {};
+    const fieldNames = Object.keys(properties);
+
+    console.log('GeoHub: Available attributes:', fieldNames);
+
+    if (fieldNames.length === 0) {
+      console.warn('GeoHub: No properties found in features');
+      return;
+    }
+
+    // 属性オプションを追加
+    fieldNames.forEach(fieldName => {
+      const option = document.createElement('option');
+      option.value = fieldName;
+      option.textContent = fieldName;
+      selectElement.appendChild(option);
+    });
+
+    console.log(`GeoHub: Added ${fieldNames.length} attribute options`);
+
+  } catch (error) {
+    console.error('GeoHub: Failed to load attributes for label', error);
+    alert('属性の読み込みに失敗しました: ' + error.message);
+  }
+}
+
+/**
+ * ラベル表示/非表示の変更をハンドル
+ */
+function handleLabelVisibilityChange(layerId, visible, attributeName) {
+  if (visible && attributeName) {
+    addLabelToMap(layerId, attributeName);
+  } else {
+    removeLabelFromMap(layerId);
+  }
+}
+
+/**
+ * 地図にラベルレイヤーを追加
+ */
+function addLabelToMap(layerId, attributeName) {
+  const map = getMap();
+  if (!map) return;
+
+  const layer = getLayer(layerId);
+
+  if (!layer) return;
+
+  const labelLayerId = `${layerId}-label`;
+
+  // 既存のラベルレイヤーを削除
+  if (map.getLayer(labelLayerId)) {
+    map.removeLayer(labelLayerId);
+  }
+
+  // ラベルレイヤーを追加
+  try {
+    const labelConfig = {
+      id: labelLayerId,
+      type: 'symbol',
+      source: layerId,
+      'source-layer': layer.metadata?.sourceLayer,
+      layout: {
+        'text-field': ['get', attributeName],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 14,
+        'text-anchor': 'center',
+        'text-offset': [0, 0],
+        'text-allow-overlap': true,
+        'text-ignore-placement': false,
+        'text-optional': true
+      },
+      paint: {
+        'text-color': '#000000',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 2,
+        'text-halo-blur': 1
+      }
+    };
+
+    console.log('GeoHub: Adding label layer with config:', labelConfig);
+    map.addLayer(labelConfig);
+
+    console.log(`GeoHub: Successfully added label layer ${labelLayerId} with attribute ${attributeName}`);
+    console.log(`GeoHub: Source layer: ${layer.metadata?.sourceLayer}`);
+  } catch (error) {
+    console.error('GeoHub: Failed to add label layer', error);
+    alert('ラベルレイヤーの追加に失敗しました: ' + error.message);
+  }
+}
+
+/**
+ * 地図からラベルレイヤーを削除
+ */
+function removeLabelFromMap(layerId) {
+  const map = getMap();
+  if (!map) return;
+
+  const labelLayerId = `${layerId}-label`;
+
+  if (map.getLayer(labelLayerId)) {
+    map.removeLayer(labelLayerId);
+    console.log(`GeoHub: Removed label layer ${labelLayerId}`);
+  }
+}
+
+/**
+ * レイヤースタイル設定をハンドル
+ */
+function handleLayerStyle(layerId) {
+  openStyleSettingDialog(layerId);
+}
+
+/**
  * レイヤー削除をハンドル
  */
 function handleLayerDelete(layerId) {
@@ -194,9 +435,24 @@ function applyLayerVisibilityToMap(layerId, visible) {
   const map = getMap();
   if (!map) return;
 
-  const mapLayerId = `${layerId}-layer`;
-  if (map.getLayer(mapLayerId)) {
-    map.setLayoutProperty(mapLayerId, 'visibility', visible ? 'visible' : 'none');
+  const visibility = visible ? 'visible' : 'none';
+
+  // ラスタータイルの場合
+  const rasterLayerId = `${layerId}-layer`;
+  if (map.getLayer(rasterLayerId)) {
+    map.setLayoutProperty(rasterLayerId, 'visibility', visibility);
+  }
+
+  // ベクタータイル/PMTilesの場合（fillとlineの両方）
+  const fillLayerId = `${layerId}-fill`;
+  const lineLayerId = `${layerId}-line`;
+
+  if (map.getLayer(fillLayerId)) {
+    map.setLayoutProperty(fillLayerId, 'visibility', visibility);
+  }
+
+  if (map.getLayer(lineLayerId)) {
+    map.setLayoutProperty(lineLayerId, 'visibility', visibility);
   }
 }
 
@@ -207,17 +463,25 @@ function applyLayerOpacityToMap(layerId, opacity) {
   const map = getMap();
   if (!map) return;
 
-  const mapLayerId = `${layerId}-layer`;
-  if (map.getLayer(mapLayerId)) {
-    // レイヤータイプに応じて適切なプロパティを使用
-    const layer = map.getLayer(mapLayerId);
+  // ラスタータイルの場合
+  const rasterLayerId = `${layerId}-layer`;
+  if (map.getLayer(rasterLayerId)) {
+    const layer = map.getLayer(rasterLayerId);
     if (layer.type === 'raster') {
-      map.setPaintProperty(mapLayerId, 'raster-opacity', opacity);
-    } else if (layer.type === 'fill') {
-      map.setPaintProperty(mapLayerId, 'fill-opacity', opacity);
-    } else if (layer.type === 'line') {
-      map.setPaintProperty(mapLayerId, 'line-opacity', opacity);
+      map.setPaintProperty(rasterLayerId, 'raster-opacity', opacity);
     }
+  }
+
+  // ベクタータイル/PMTilesの場合（fillとlineの両方）
+  const fillLayerId = `${layerId}-fill`;
+  const lineLayerId = `${layerId}-line`;
+
+  if (map.getLayer(fillLayerId)) {
+    map.setPaintProperty(fillLayerId, 'fill-opacity', opacity);
+  }
+
+  if (map.getLayer(lineLayerId)) {
+    map.setPaintProperty(lineLayerId, 'line-opacity', opacity);
   }
 }
 
@@ -228,11 +492,30 @@ function removeLayerFromMap(layerId) {
   const map = getMap();
   if (!map) return;
 
-  const mapLayerId = `${layerId}-layer`;
-  if (map.getLayer(mapLayerId)) {
-    map.removeLayer(mapLayerId);
+  // ラスタータイルの場合
+  const rasterLayerId = `${layerId}-layer`;
+  if (map.getLayer(rasterLayerId)) {
+    map.removeLayer(rasterLayerId);
   }
 
+  // ベクタータイル/PMTilesの場合（fillとlineの両方）
+  const fillLayerId = `${layerId}-fill`;
+  const lineLayerId = `${layerId}-line`;
+  const labelLayerId = `${layerId}-label`;
+
+  if (map.getLayer(labelLayerId)) {
+    map.removeLayer(labelLayerId);
+  }
+
+  if (map.getLayer(lineLayerId)) {
+    map.removeLayer(lineLayerId);
+  }
+
+  if (map.getLayer(fillLayerId)) {
+    map.removeLayer(fillLayerId);
+  }
+
+  // ソースを削除
   if (map.getSource(layerId)) {
     map.removeSource(layerId);
   }

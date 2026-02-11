@@ -82,6 +82,12 @@
   gap: 8px;
 }
 
+.layer-button-container {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .opacity-control {
   display: flex;
   align-items: center;
@@ -106,8 +112,79 @@
   color: #333;
 }
 
+/* ラベルコントロール */
+.label-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #f8f8f8;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.label-checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-visibility {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.label-checkbox-label {
+  cursor: pointer;
+  color: #666;
+  font-weight: 500;
+  user-select: none;
+}
+
+.label-select-container {
+  width: 100%;
+}
+
+.label-attribute-select {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 12px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+}
+
+.label-attribute-select:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.label-attribute-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.layer-style {
+  padding: 4px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #4a90e2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.layer-style:hover {
+  background: #e3f2fd;
+  border-color: #4a90e2;
+}
+
 .layer-delete {
-  align-self: flex-end;
   padding: 4px 12px;
   background: #fff;
   border: 1px solid #ddd;
